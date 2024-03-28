@@ -10,6 +10,11 @@ fn main() -> io::Result<()> {
     let mut content = String::new();
     file.read_to_string(&mut content)?;
 
+    println!(
+        "input test.txt\n------------\n{}------------",
+        content.to_string()
+    );
+
     let mut lexx = Lexer {
         source: content.to_string(),
         cur_char: ' ',
@@ -19,22 +24,24 @@ fn main() -> io::Result<()> {
     while lexx.cur_char != '\0' {
         lexx.next_char();
         let current_token = lexx.get_token();
-        println!("{:?}", current_token);
+        println!(
+            "{:?}: {:?}",
+            current_token.clone().unwrap().kind,
+            current_token.unwrap().text
+        );
     }
+    // okay so the lexer is doing the correct things and whatever,
+    // it's just the parser is being retarded with how to drive the lexer.
 
-    let mut parss = Parser {
-        lexer: lexx,
-        cur_token: Token {
-            kind: TokenType::NEWLINE,
-            text: "\n".to_string(),
-        },
-        peek_token: Token {
-            kind: TokenType::NEWLINE,
-            text: "\n".to_string(),
-        },
-    };
-
-    parss.program();
+    // let mut parss = Parser {
+    //     lexer: lexx,
+    //     cur_token: None,
+    //     peek_token: None,
+    // };
+    // parss.next_token();
+    // parss.next_token();
+    //
+    // parss.program();
 
     Ok(())
 }
@@ -58,7 +65,7 @@ impl Lexer {
     }
 
     // Return the lookahead character.
-    fn peek(&mut self) -> char {
+    fn peek(&self) -> char {
         if self.cur_pos + 1 < self.source.len() as i32 {
             return self.source.chars().nth(self.cur_pos as usize).unwrap();
         } else {
@@ -233,12 +240,11 @@ impl Lexer {
             'A'..='Z' | 'a'..='z' => {
                 let start_pos = self.cur_pos;
 
-                while self.cur_char.is_ascii_alphanumeric() {
+                while self.peek().is_ascii_alphanumeric() {
                     self.next_char();
                 }
 
-                let token_text =
-                    &self.source[(start_pos - 1) as usize..(self.cur_pos - 1) as usize];
+                let token_text = &self.source[(start_pos - 1) as usize..(self.cur_pos) as usize];
 
                 let keyword = Token::check_if_keyword(&token_text);
 
@@ -322,16 +328,22 @@ enum TokenType {
 #[derive(Debug)]
 struct Parser {
     lexer: Lexer,
-    cur_token: Token,
-    peek_token: Token,
+    cur_token: Option<Token>,
+    peek_token: Option<Token>,
 }
 
 impl Parser {
     fn check_token(&self, token_type: TokenType) -> bool {
-        return token_type == self.cur_token.kind;
+        // println!(
+        //     "{:?} and {:?}",
+        //     token_type,
+        //     self.cur_token.as_ref().unwrap().kind
+        // );
+        // println!("{:?}", self.lexer.get_token());
+        return token_type == self.cur_token.as_ref().unwrap().kind;
     }
     fn check_peek(&self, token_type: TokenType) -> bool {
-        return token_type == self.peek_token.kind;
+        return token_type == self.peek_token.as_ref().unwrap().kind;
     }
     fn match_token(&mut self, token_type: TokenType) {
         if !self.check_token(token_type.clone()) {
@@ -344,7 +356,7 @@ impl Parser {
     }
     fn next_token(&mut self) {
         self.cur_token = self.peek_token.clone();
-        self.peek_token = self.lexer.get_token().unwrap();
+        self.peek_token = self.lexer.get_token();
     }
 
     fn abort(&self, message: String) {
@@ -354,8 +366,6 @@ impl Parser {
 
     fn program(&mut self) {
         println!("PROGRAM");
-        self.next_token();
-        self.next_token();
 
         while !self.check_token(TokenType::EOF) {
             self.statement();
@@ -366,23 +376,26 @@ impl Parser {
         if self.check_token(TokenType::PRINT) {
             println!("STATEMENT-PRINT");
             self.next_token();
-
             if self.check_token(TokenType::STRING) {
                 self.next_token();
             } else {
-                // self.expression();
+                self.expression();
             }
         } else if self.check_token(TokenType::IF) {
             println!("STATEMENT-IF");
             self.next_token();
-            // self.comparison();
-
+            self.comparison();
             self.match_token(TokenType::THEN);
             self.nl();
+            // zero or more statements in the body
+            while !self.check_token(TokenType::ENDIF) {
+                self.statement()
+            }
+            self.match_token(TokenType::ENDIF)
         } else if self.check_token(TokenType::WHILE) {
             println!("STATEMENT-WHILE");
             self.next_token();
-            // self.comparison();
+            self.comparison();
 
             self.match_token(TokenType::REPEAT);
             self.nl();
@@ -390,6 +403,7 @@ impl Parser {
             while !self.check_token(TokenType::ENDWHILE) {
                 self.statement();
             }
+            self.match_token(TokenType::ENDWHILE)
         } else if self.check_token(TokenType::LABEL) {
             println!("STATEMENT-LABEL");
             self.next_token();
@@ -403,7 +417,7 @@ impl Parser {
             self.next_token();
             self.match_token(TokenType::IDENT);
             self.match_token(TokenType::EQ);
-            // self.expression();
+            self.expression();
         } else if self.check_token(TokenType::INPUT) {
             println!("STATEMENT-INPUT");
             self.next_token();
@@ -411,7 +425,8 @@ impl Parser {
         } else {
             self.abort(format!(
                 "Invalid statement at {:?} ({:?})",
-                self.cur_token.text, self.cur_token.kind
+                self.cur_token.as_ref().unwrap().text,
+                self.cur_token.as_ref().unwrap().kind
             ))
         }
         self.nl();
@@ -420,8 +435,20 @@ impl Parser {
     fn nl(&mut self) {
         println!("NEWLINE");
         self.match_token(TokenType::NEWLINE);
+        self.match_token(TokenType::NEWLINE);
+        self.match_token(TokenType::NEWLINE);
+        self.match_token(TokenType::NEWLINE);
+        self.match_token(TokenType::NEWLINE);
         while self.check_token(TokenType::NEWLINE) {
             self.next_token();
         }
+    }
+
+    fn comparison(&self) {
+        todo!()
+    }
+
+    fn expression(&self) {
+        todo!()
     }
 }
