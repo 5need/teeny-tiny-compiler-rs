@@ -45,10 +45,17 @@ impl Lexer {
     // Skip comments in the code.
     fn skip_comment(&mut self) {
         if self.cur_char == '#' {
-            while self.cur_char != '\n' {
+            loop {
+                if self.cur_char == '\n' {
+                    if self.peek() == '#' {
+                        self.next_char();
+                    } else {
+                        self.next_char();
+                        break;
+                    }
+                }
                 self.next_char();
             }
-            self.next_char();
         }
     }
 
