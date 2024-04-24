@@ -23,9 +23,9 @@ impl Lexer {
     // Return the lookahead character.
     fn peek(&self) -> char {
         if self.cur_pos + 1 < self.source.len() as i32 {
-            return self.source.chars().nth(self.cur_pos as usize).unwrap();
+            self.source.chars().nth(self.cur_pos as usize).unwrap()
         } else {
-            return '\0';
+            '\0'
         }
     }
 
@@ -57,94 +57,86 @@ impl Lexer {
         self.skip_whitespace();
         self.skip_comment();
         match self.cur_char {
-            '+' => {
-                return Some(Token {
-                    text: self.cur_char.to_string(),
-                    kind: TokenType::PLUS,
-                });
-            }
-            '-' => {
-                return Some(Token {
-                    text: self.cur_char.to_string(),
-                    kind: TokenType::MINUS,
-                });
-            }
-            '*' => {
-                return Some(Token {
-                    text: self.cur_char.to_string(),
-                    kind: TokenType::ASTERISK,
-                });
-            }
-            '/' => {
-                return Some(Token {
-                    text: self.cur_char.to_string(),
-                    kind: TokenType::SLASH,
-                });
-            }
-            '\n' => {
-                return Some(Token {
-                    text: self.cur_char.to_string(),
-                    kind: TokenType::NEWLINE,
-                });
-            }
-            '\0' => {
-                return Some(Token {
-                    text: '\0'.to_string(),
-                    kind: TokenType::EOF,
-                });
-            }
+            '+' => Some(Token {
+                text: self.cur_char.to_string(),
+                kind: TokenType::PLUS,
+            }),
+            '-' => Some(Token {
+                text: self.cur_char.to_string(),
+                kind: TokenType::MINUS,
+            }),
+            '*' => Some(Token {
+                text: self.cur_char.to_string(),
+                kind: TokenType::ASTERISK,
+            }),
+            '/' => Some(Token {
+                text: self.cur_char.to_string(),
+                kind: TokenType::SLASH,
+            }),
+            '\n' => Some(Token {
+                text: self.cur_char.to_string(),
+                kind: TokenType::NEWLINE,
+            }),
+            '\0' => Some(Token {
+                text: '\0'.to_string(),
+                kind: TokenType::EOF,
+            }),
             '>' => {
                 if self.peek() == '=' {
                     let last_char = self.cur_char.clone();
                     self.next_char();
-                    return Some(Token {
+                    Some(Token {
                         text: last_char.to_string() + &self.cur_char.to_string(),
                         kind: TokenType::GTEQ,
-                    });
+                    })
+                } else {
+                    Some(Token {
+                        text: '>'.to_string(),
+                        kind: TokenType::GT,
+                    })
                 }
-                return Some(Token {
-                    text: '>'.to_string(),
-                    kind: TokenType::GT,
-                });
             }
             '<' => {
                 if self.peek() == '=' {
                     let last_char = self.cur_char.clone();
                     self.next_char();
-                    return Some(Token {
+                    Some(Token {
                         text: last_char.to_string() + &self.cur_char.to_string(),
                         kind: TokenType::LTEQ,
-                    });
+                    })
+                } else {
+                    Some(Token {
+                        text: '<'.to_string(),
+                        kind: TokenType::LT,
+                    })
                 }
-                return Some(Token {
-                    text: '<'.to_string(),
-                    kind: TokenType::LT,
-                });
             }
             '=' => {
                 if self.peek() == '=' {
                     let last_char = self.cur_char.clone();
                     self.next_char();
-                    return Some(Token {
+                    Some(Token {
                         text: last_char.to_string() + &self.cur_char.to_string(),
                         kind: TokenType::EQEQ,
-                    });
+                    })
+                } else {
+                    Some(Token {
+                        text: '='.to_string(),
+                        kind: TokenType::EQ,
+                    })
                 }
-                return Some(Token {
-                    text: '='.to_string(),
-                    kind: TokenType::EQ,
-                });
             }
             '!' => {
                 if self.peek() == '=' {
                     let last_char = self.cur_char.clone();
                     self.next_char();
-                    return Some(Token {
+                    Some(Token {
                         text: last_char.to_string() + &self.cur_char.to_string(),
                         kind: TokenType::NOTEQ,
-                    });
+                    })
+                } else {
+                    None
                 }
-                return None;
             }
             '"' => {
                 self.next_char();
@@ -166,11 +158,11 @@ impl Lexer {
                     }
                     self.next_char();
                 }
-                return Some(Token {
+                Some(Token {
                     text: self.source[(start_pos - 1) as usize..(self.cur_pos - 1) as usize]
                         .to_string(),
                     kind: TokenType::STRING,
-                });
+                })
             }
             '0'..='9' => {
                 let start_pos = self.cur_pos;
@@ -187,11 +179,11 @@ impl Lexer {
                         self.next_char();
                     }
                 }
-                return Some(Token {
+                Some(Token {
                     text: self.source[(start_pos - 1) as usize..(self.cur_pos - 1) as usize]
                         .to_string(),
                     kind: TokenType::NUMBER,
-                });
+                })
             }
             'A'..='Z' | 'a'..='z' => {
                 let start_pos = self.cur_pos;
@@ -205,20 +197,18 @@ impl Lexer {
                 let keyword = Token::check_if_keyword(&token_text);
 
                 if keyword.is_none() {
-                    return Some(Token {
+                    Some(Token {
                         text: token_text.to_string(),
                         kind: TokenType::IDENT,
-                    });
+                    })
                 } else {
-                    return Some(Token {
+                    Some(Token {
                         text: token_text.to_string(),
                         kind: keyword.unwrap(),
-                    });
+                    })
                 }
             }
-            _ => {
-                return None;
-            }
-        };
+            _ => None,
+        }
     }
 }
